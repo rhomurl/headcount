@@ -66,8 +66,10 @@ Re-run app checks and chain smoke, ship the verified adapter source, rebuild the
 
 ### Activation outcome
 
-Source `350b6e0` is built and running as one PM2 fork on loopback 3100. DNS/funding, four contract deployment receipts, token/escrow configuration, corrected live chain smoke, public HTTPS API flow and certificate renewal dry-run passed. HTTP redirects to HTTPS and the app returns 200. App suite now has 62 passing tests and contracts 15. Private operator environment transfer was explicitly approved by the user after the initial automatic review rejection; no key was printed or committed. See `STATUS.md` for public receipts, uncertain-client reconciliation and remaining two-phone/publication gates.
+Source `350b6e0` is built and running as one PM2 fork on loopback 3100. DNS/funding, four contract deployment receipts, token/escrow configuration, corrected live chain smoke, public HTTPS API flow and certificate renewal dry-run passed. HTTP redirects to HTTPS and the app returns 200. App suite now has 62 passing tests and contracts 15. Private operator environment transfer was explicitly approved by the user after the initial automatic review rejection; no key was printed or committed. See `STATUS.md` for public receipts, uncertain-client reconciliation and remaining two-phone/submission gates.
 
 ### GitHub publication plan
 
 The user explicitly requested pushing the project to GitHub under `rhomurl`. Live account verification confirms `rhomurl`; `rhomurl/headcount` does not exist and no remote is configured. Create that public repository per the submission scope, publish the reviewed committed snapshot to `main` and `codex/headcount-mvp`, and retain the local working branch. Verify both remote SHAs/default branch, then record publication separately from running app source `350b6e0`. History scan checked 162 blobs: dedicated operator key, populated environments, databases, private keys and runtime/build paths absent. No license has been selected; public availability does not imply an open-source license.
+
+Publication executed: created `rhomurl/headcount`, pushed `88839a1` to both branches and configured local branch tracking. `main` is the selected default branch and the live app URL is its homepage. This publication record is included in a follow-up documentation push; app code is unchanged.

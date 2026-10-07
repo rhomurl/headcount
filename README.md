@@ -11,6 +11,7 @@ Sponsor-funded attendance payouts on Base Sepolia. A sponsor funds an escrow cam
 - [Agent guidance](AGENTS.md): workflow for Codex, Claude, and other coding agents.
 - [Documentation index](docs/README.md): task packs and project records.
 - [Contributing](CONTRIBUTING.md): local workflow and handoff checks.
+- [GitHub repository](https://github.com/rhomurl/headcount): public source; default branch `main`, ongoing work on `codex/headcount-mvp`.
 
 ## Stack
 

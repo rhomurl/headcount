@@ -13,10 +13,10 @@ Last updated: 7 October 2026 (Asia/Manila).
 | UI | Implemented; automated local checks verified | 10 UI tests; desktop/mobile render and scanner PIN gate; screenshots in `screenshots/` |
 | Integration | Local and deployed API flow verified | 62 app/preflight tests; real Base Sepolia payout/refund over the deployed HTTPS API |
 | Deployment preparation | Complete | Funded operator, DNS A record, successful chain smoke, certificate and renewal dry-run |
-| GitHub publication | Not performed | No push, public repository or remote verified during implementation |
+| GitHub publication | Published | [rhomurl/headcount](https://github.com/rhomurl/headcount), public; `main` and `codex/headcount-mvp` pushed |
 | Contract deployment | Deployed and receipt-verified on Base Sepolia | Token/escrow plus mint/approval receipts; owner/operator and decimals checked; live smoke passed |
 | VPS deployment | Active; automated checks verified | Source `350b6e0`, one Node 24 PM2 fork, loopback 3100, trusted HTTPS; real-phone camera flow remains required |
-| Submission assets | Not completed | Live URL, public repository, deck and backup video remain separate |
+| Submission assets | Partially complete | Live URL/repository available; deck, backup video and phone checks remain pending |
 
 ## Decisions and review resolutions
 
@@ -49,9 +49,9 @@ All commands used Node 24.19.0 (bundled runtime added to PATH):
 
 ## Remaining gates
 
-Real-phone camera verification, GitHub publication and submission artifacts remain separate gates. Explorer source verification was not performed. Minor UI polish remains: favicon 404 in a fresh browser; empty closed-dashboard copy still invites RSVPs even though the API rejects them. The old local preview has chain credentials disabled.
+Real-phone camera verification, submission deck and backup video remain separate gates. Explorer source verification was not performed. Minor UI polish remains: favicon 404 in a fresh browser; empty closed-dashboard copy still invites RSVPs even though the API rejects them. The old local preview has chain credentials disabled.
 
-No external deployment occurred during the initial local MVP implementation. Subsequent deployment evidence is recorded below; GitHub publication remains unperformed.
+No external deployment occurred during the initial local MVP implementation. Subsequent deployment and publication evidence is recorded below.
 
 ## Deployment preparation evidence (before funding/DNS completion)
 
@@ -90,4 +90,11 @@ No external deployment occurred during the initial local MVP implementation. Sub
 - Synthetic verified campaign `-QqZ97mW7lNKISYTO2yR4`: [create receipt](https://sepolia.basescan.org/tx/0x94ec48f6106da936fb8afbd73bd35b17b5f00f93600b5e1bdf04f9b6b6466aff), [confirmed host payout](https://sepolia.basescan.org/tx/0xac357af36d3adab8aa8067f2984941e5b80d930cbc5c550f924b1fca155983bb), [sponsor refund/close](https://sepolia.basescan.org/tx/0xb04848d7d8328cc1f50e740bf20242c198b3786210aec049b1fa19b3de6963e6). Synthetic test records remain closed in the private database as deployment evidence.
 - Earlier funded RPC diagnostic campaign reconciled/refunded successfully: [receipt](https://sepolia.basescan.org/tx/0xf43539b7b4878def9fe2cfd53eec0f1b543f85042b5801e8aaa3843ff73d8cdc). Total escrow token balance verified zero after chain smoke and diagnostic reconciliation, before app activation. Zero-funded diagnostic creations remain on-chain.
 - External checks independently confirmed HTTP redirect, trusted HTTPS 200, and invalid POST 400 without sending a transaction. Browser worker verified desktop 1400×1000/mobile 390×844 layouts, secure context, scanner PIN gate, no overflow/page exceptions, and exact deployed escrow link on a public test dashboard. Fresh-home favicon request returned 404; dashboard run had no console errors. Screenshots inspected in private temporary files with no PIN values.
-- Automated HTTPS checks do **not** prove camera permission or physical scanning. Two real phones, backup video, submission deck and repository publication remain unverified/unperformed.
+- Automated HTTPS checks do **not** prove camera permission or physical scanning. Two real phones, backup video and submission deck remain unverified/unperformed.
+
+## GitHub publication evidence
+
+- User explicitly requested a push under `rhomurl`; authenticated account verified and target repository absence checked before creation. Created public [rhomurl/headcount](https://github.com/rhomurl/headcount) per the submission scope.
+- Published initial verified snapshot `88839a1` to `main` and `codex/headcount-mvp`. Default branch set to `main`, homepage set to the deployed HTTPS URL, local working branch retained and tracking its matching remote branch. Documentation publication record follows in the next push.
+- Full Git history scan covered 162 blobs before publication: dedicated operator key, populated environment, database, PEM/key files and runtime/build/cache paths absent. `.env.local` and private Foundry/runtime data remain ignored and were not uploaded.
+- Application source running on the VPS remains `350b6e0`; subsequent commits contain deployment/publication documentation only. No release/tag or PR was created. No open-source license has been selected.
