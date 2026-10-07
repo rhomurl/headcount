@@ -21,7 +21,7 @@
 - [x] Update deployment/chain task packs to use checked-in tool wrappers and preflight commands; distinguish preparation from deployment.
 - [x] Run tests, lint, typecheck, configuration/link checks and inspect staged contents before a local commit.
 - [x] Stage committed source `6ff5d64` and dependencies in the new `/root/headcount` directory. VPS tests, types and lint pass; app not built or started.
-- [ ] After wallet/funding and DNS gates pass, perform the authorized testnet and HTTPS integration and record receipts. Public repository publication and phone verification remain separate.
+- [x] After wallet/funding and DNS gates pass, perform authorized testnet and HTTPS integration and record receipts. Public repository publication and phone verification remain separate.
 
 ## Gates
 
@@ -63,3 +63,11 @@ Re-run app checks and chain smoke, ship the verified adapter source, rebuild the
 - Deployment reviewer checked preflight and PM2. Queued-response timeout risk addressed with explicit 300-second proxy timeouts; indefinite backlog and an unreceived create result remain documented limitations.
 - Local Markdown links and `git diff --check` passed. No private environment, operator key or attendee database was added to Git or the server.
 - VPS source archive SHA-256 verified before extraction; 57 tests, typecheck/lint and PM2 structure check passed on Node 24.18.0. Existing PM2 apps remain online, port 3100 free, no production build/environment/server process activated.
+
+### Activation outcome
+
+Source `350b6e0` is built and running as one PM2 fork on loopback 3100. DNS/funding, four contract deployment receipts, token/escrow configuration, corrected live chain smoke, public HTTPS API flow and certificate renewal dry-run passed. HTTP redirects to HTTPS and the app returns 200. App suite now has 62 passing tests and contracts 15. Private operator environment transfer was explicitly approved by the user after the initial automatic review rejection; no key was printed or committed. See `STATUS.md` for public receipts, uncertain-client reconciliation and remaining two-phone/publication gates.
+
+### GitHub publication plan
+
+The user explicitly requested pushing the project to GitHub under `rhomurl`. Live account verification confirms `rhomurl`; `rhomurl/headcount` does not exist and no remote is configured. Create that public repository per the submission scope, publish the reviewed committed snapshot to `main` and `codex/headcount-mvp`, and retain the local working branch. Verify both remote SHAs/default branch, then record publication separately from running app source `350b6e0`. History scan checked 162 blobs: dedicated operator key, populated environments, databases, private keys and runtime/build paths absent. No license has been selected; public availability does not imply an open-source license.

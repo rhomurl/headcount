@@ -11,11 +11,11 @@ Last updated: 7 October 2026 (Asia/Manila).
 | Contracts/chain adapter | Implemented and locally verified | Solidity 0.8.24; 15 Foundry tests; real adapter in loopback Anvil flow |
 | Database/API | Implemented and locally verified | 16 API/QR tests; real SQLite + real-chain API flow |
 | UI | Implemented; automated local checks verified | 10 UI tests; desktop/mobile render and scanner PIN gate; screenshots in `screenshots/` |
-| Integration | Locally verified | 57 app/preflight tests plus prior loopback real receipts, host payout and sponsor refund |
-| Deployment preparation | Prerequisites verified; activation in progress | Funded operator, DNS A record, successful chain smoke and issued Let's Encrypt certificate |
+| Integration | Local and deployed API flow verified | 62 app/preflight tests; real Base Sepolia payout/refund over the deployed HTTPS API |
+| Deployment preparation | Complete | Funded operator, DNS A record, successful chain smoke, certificate and renewal dry-run |
 | GitHub publication | Not performed | No push, public repository or remote verified during implementation |
 | Contract deployment | Deployed and receipt-verified on Base Sepolia | Token/escrow plus mint/approval receipts; owner/operator and decimals checked; live smoke passed |
-| VPS deployment | Source staged; app not activated | Source `6ff5d64` in `/root/headcount`; configured build, HTTPS and two-phone flow remain required |
+| VPS deployment | Active; automated checks verified | Source `350b6e0`, one Node 24 PM2 fork, loopback 3100, trusted HTTPS; real-phone camera flow remains required |
 | Submission assets | Not completed | Live URL, public repository, deck and backup video remain separate |
 
 ## Decisions and review resolutions
@@ -49,11 +49,11 @@ All commands used Node 24.19.0 (bundled runtime added to PATH):
 
 ## Remaining gates
 
-Finish the corrected VPS build, start one loopback PM2 process, activate its isolated HTTPS proxy, and verify the live API/receipt flow. Real-phone camera verification, publication and submission artifacts remain separate gates. The old local preview has chain credentials disabled.
+Real-phone camera verification, GitHub publication and submission artifacts remain separate gates. Explorer source verification was not performed. Minor UI polish remains: favicon 404 in a fresh browser; empty closed-dashboard copy still invites RSVPs even though the API rejects them. The old local preview has chain credentials disabled.
 
-No Base Sepolia transactions, external deployment or publication occurred in this implementation run.
+No external deployment occurred during the initial local MVP implementation. Subsequent deployment evidence is recorded below; GitHub publication remains unperformed.
 
-## Deployment preparation evidence
+## Deployment preparation evidence (before funding/DNS completion)
 
 - Selected target: `rhm-server-eu`, public origin `https://headcount.zymo.qzz.io`. Read-only SSH verified ARM64, Node 24.18.0, PM2, existing Nginx/Certbot and free port 3100. `/root/headcount` did not exist at discovery. Other running apps were preserved.
 - Existing ingress is Nginx, so deployment uses a separate vhost rather than adding Caddy on occupied ports 80/443. The shared specification and task packs reflect this infrastructure change.
@@ -78,3 +78,16 @@ No Base Sepolia transactions, external deployment or publication occurred in thi
 - Corrected `npm run smoke -- --send-testnet-transactions`: exit 0. Funded 50 hUSDC, paid host 5, duplicate rejected, remaining 45 refunded and escrow campaign balance zero. [Payout receipt](https://sepolia.basescan.org/tx/0x1fd26cacfb3773d86f146b99619b2633174ecfd1375da695b38a9a45c07ee21c), [close/refund receipt](https://sepolia.basescan.org/tx/0x1842ff7b355cafe65d274a506ee2100f47e9c7bb44d1c12016f70fcd97c5e7f8).
 - Isolated HTTP bootstrap enabled and validated; ACME challenge probe passed. Certificate issued by Let's Encrypt using the existing account, SAN/hostname/expiry checks passed. Expires 5 January 2027 at 15:51:13 Asia/Manila. Public HTTP intentionally returns 503 until app activation; HTTPS proxy not yet enabled.
 - Initial VPS production build with real public escrow succeeded. Corrected adapter rebuild/activation is in progress. No app wallet writer runs while the chain smoke/reconciliation script uses the operator.
+
+## Completed VPS / HTTPS verification
+
+- Running source commit: `350b6e0` in `/root/headcount` on `rhm-server-eu`. Verified source archive SHA-256 before extraction. Node 24.18.0: preflight, **62 tests**, typecheck, lint and default production build exit 0. Private operator identity matches; key is absent from `.next/static` public assets. No database, private environment or Foundry cache entered Git/source archives.
+- Exactly one Headcount PM2 fork is online on `127.0.0.1:3100`; startup health check passed and process list saved. All five pre-existing PM2 apps remained online with no restarts. Runtime data directory is mode 700 and SQLite/sidecars mode 600; private environment mode 600.
+- Isolated Headcount HTTPS site enabled after app readiness. `nginx -t` and reload passed; other enabled site content hashes unchanged. Public HTTP returns **308** to HTTPS; trusted HTTPS root returns **200**. The temporary bootstrap 503 is removed. Bootstrap rollback copy retained at `/etc/nginx/headcount-http-bootstrap.8692XtqE`.
+- `certbot renew --dry-run --cert-name headcount.zymo.qzz.io --non-interactive`: exit 0, simulated renewal succeeded. Certbot automatically registered a staging account from existing renewal settings; production certificate/SAN unchanged. Existing Nginx protocol-option warnings belong to unrelated sites.
+- First external API-test client timed out despite Nginx logging successful create/fund 200 responses and chain creation/funding completing. Reconciled its synthetic campaign `lEt7CHlTpbgkPKw1wsg_i` through the app API, refunding its 2 hUSDC: [close receipt](https://sepolia.basescan.org/tx/0xc706f46ee872562a95f5cc136911f13d146c4282ba72344f8fd9afebdd22719f). Do not treat an uncertain client response as a failed transaction.
+- Fresh full API test ran from the VPS against the **public HTTPS origin**, using the checked-in flow with secret-free stage instrumentation in a disposable script. Exit 0: create/fund/RSVP/QR, wrong PIN/malformed rejection, confirmed payout, duplicate rejection, 61-second-old QR rejection, close/refund and closed RSVP rejection. Test PINs/codes stayed in protected temporary files and were removed. No separate process wrote the operator wallet.
+- Synthetic verified campaign `-QqZ97mW7lNKISYTO2yR4`: [create receipt](https://sepolia.basescan.org/tx/0x94ec48f6106da936fb8afbd73bd35b17b5f00f93600b5e1bdf04f9b6b6466aff), [confirmed host payout](https://sepolia.basescan.org/tx/0xac357af36d3adab8aa8067f2984941e5b80d930cbc5c550f924b1fca155983bb), [sponsor refund/close](https://sepolia.basescan.org/tx/0xb04848d7d8328cc1f50e740bf20242c198b3786210aec049b1fa19b3de6963e6). Synthetic test records remain closed in the private database as deployment evidence.
+- Earlier funded RPC diagnostic campaign reconciled/refunded successfully: [receipt](https://sepolia.basescan.org/tx/0xf43539b7b4878def9fe2cfd53eec0f1b543f85042b5801e8aaa3843ff73d8cdc). Total escrow token balance verified zero after chain smoke and diagnostic reconciliation, before app activation. Zero-funded diagnostic creations remain on-chain.
+- External checks independently confirmed HTTP redirect, trusted HTTPS 200, and invalid POST 400 without sending a transaction. Browser worker verified desktop 1400×1000/mobile 390×844 layouts, secure context, scanner PIN gate, no overflow/page exceptions, and exact deployed escrow link on a public test dashboard. Fresh-home favicon request returned 404; dashboard run had no console errors. Screenshots inspected in private temporary files with no PIN values.
+- Automated HTTPS checks do **not** prove camera permission or physical scanning. Two real phones, backup video, submission deck and repository publication remain unverified/unperformed.

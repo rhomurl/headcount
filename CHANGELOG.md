@@ -17,6 +17,7 @@ Record meaningful implemented changes here. Plans and incomplete work belong in 
 - Closure recovery fences, direct-chain closure reconciliation and recovery controls for older failed payouts.
 - 51 app tests, 15 contract tests, loopback real-chain integration harness and verified desktop/mobile screenshots.
 - Credential-safe environment preflight with six tests, Node 24 single-fork PM2 configuration, and isolated Nginx bootstrap/HTTPS examples for the selected VPS and hostname.
+- Base Sepolia mock-token/escrow deployment and live HTTPS app at `headcount.zymo.qzz.io`, with recorded payout/refund receipts and verified certificate renewal.
 
 ### Fixed
 
