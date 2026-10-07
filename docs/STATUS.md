@@ -12,10 +12,10 @@ Last updated: 7 October 2026 (Asia/Manila).
 | Database/API | Implemented and locally verified | 16 API/QR tests; real SQLite + real-chain API flow |
 | UI | Implemented; automated local checks verified | 10 UI tests; desktop/mobile render and scanner PIN gate; screenshots in `screenshots/` |
 | Integration | Locally verified | 57 app/preflight tests plus prior loopback real receipts, host payout and sponsor refund |
-| Deployment preparation | Configurations verified; prerequisites pending | `rhm-server-eu` (91.99.141.229), isolated Nginx templates and Node 24 PM2 config; wallet choice and DNS pending |
+| Deployment preparation | Source/dependencies staged; funding and DNS pending | `rhm-server-eu` (91.99.141.229), verified Nginx/PM2 config and fresh dedicated local operator |
 | GitHub publication | Not performed | No push, public repository or remote verified during implementation |
 | Contract deployment | Not performed on Base Sepolia | Ephemeral Anvil deployment is local test evidence only |
-| VPS deployment | Not performed | HTTPS camera flow with two real phones remains required |
+| VPS deployment | Source staged; app not activated | Source `6ff5d64` in `/root/headcount`; configured build, HTTPS and two-phone flow remain required |
 | Submission assets | Not completed | Live URL, public repository, deck and backup video remain separate |
 
 ## Decisions and review resolutions
@@ -49,7 +49,7 @@ All commands used Node 24.19.0 (bundled runtime added to PATH):
 
 ## Remaining gates
 
-Configure dedicated testnet operator credentials/funding, RPC provisioning and deployed mock-token/escrow addresses. Then authorize/run the explicit-opt-in Base Sepolia smoke test and record explorer receipts. Publication, DNS, VPS/HTTPS deployment, real-phone camera verification and submission artifacts require separate work. The local preview has chain credentials disabled and cannot create funded campaigns.
+Fund the dedicated testnet operator, then deploy mock-token/escrow contracts and configure their addresses. Run the explicit-opt-in Base Sepolia smoke test within the authorized integration task and record explorer receipts. Publication, DNS, VPS/HTTPS activation, real-phone camera verification and submission artifacts require separate work. The local preview has chain credentials disabled and cannot create funded campaigns.
 
 No Base Sepolia transactions, external deployment or publication occurred in this implementation run.
 
@@ -63,4 +63,6 @@ No Base Sepolia transactions, external deployment or publication occurred in thi
 - Deployment review identified response timeout risk for queued transactions; the example now sets 300-second read/send timeouts. An arbitrarily long queue can still time out after a mutation succeeds. Unreceived create responses have no client recovery identifier and require operator reconciliation; this remains a limitation.
 - DNS returned NXDOMAIN through the local resolver and Cloudflare DoH. Required A record: `headcount.zymo.qzz.io` → `91.99.141.229`. No certificate issued for this hostname.
 - GitHub identity `rhomurl` verified; `rhomurl/headcount` did not exist and no remote was configured. No public repository created.
-- Dedicated-wallet versus existing-environment choice remains unanswered. No operator key generated, private environment copied, testnet transaction sent or public app activated during preparation.
+- Staged source commit `6ff5d64` in the newly created `/root/headcount`, verifying archive SHA-256 before extraction. `npm ci` completed on ARM64 Node 24.18.0. All 57 tests, typecheck and lint passed on the VPS, including actual SQLite tests. PM2 configuration passed its structure check. No `.env.local` or `.next` installed there, port 3100 remains free, and all five existing PM2 apps remain online. No app started or Nginx reloaded.
+- No existing operator environment was provided, so preparation defaulted to a fresh dedicated testnet wallet after the preference question remained unanswered. Created local ignored `.env.local` with mode 600; no key printed or transferred. Public operator: `0x7E61f0f43e264151353779213be73421Df0E99c8`. Read-only RPC check verified chain ID 84532 and **0 testnet ETH**. No transaction sent. This unused wallet can be replaced if the user supplies an existing environment before deployment.
+- Local `npm run preflight` now reports only the three missing contract-address fields (expected exit 1). Operator funding, DNS and deployed contracts remain required before activation.
