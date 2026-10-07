@@ -1,0 +1,8 @@
+# Alternate ingress example only: rhm-server-eu already uses Nginx on 80/443.
+# Do not start Caddy alongside that Nginx listener. Use the Nginx examples there.
+# Confirm DNS for headcount.zymo.qzz.io points to the selected VPS before activation.
+# Add only this site block to the server's existing Caddyfile, then validate it
+# before reloading Caddy. The Node app listens on loopback only.
+headcount.zymo.qzz.io {
+    reverse_proxy 127.0.0.1:3100
+}

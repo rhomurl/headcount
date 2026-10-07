@@ -15,13 +15,13 @@
 | Token | **MockUSDC "hUSDC", 6 decimals**, operator-mintable | Testnet USDC faucets drip too little for a live demo. The escrow takes the token address as a parameter, so switching to real USDC is just a redeploy. |
 | Gas | **One operator EOA** sends every transaction through a **serial queue** | Guests and hosts never need ETH. The queue prevents nonce collisions, which are the #1 way this breaks under a burst of scans. |
 | Anti-screenshot | **Rotating HMAC QR** (30s window) | No wallet in the guest's browser. Simple and demoable. |
-| Stack | Next.js (App Router) + better-sqlite3, one app, on your VPS behind Caddy | You already deploy this way. SQLite means zero setup. |
+| Stack | Next.js (App Router) + better-sqlite3, one app, on your VPS behind its HTTPS proxy (selected VPS uses Nginx; original plan used Caddy) | You already deploy this way. SQLite means zero setup. |
 | Chain libs | **viem v2** + **Foundry** + OpenZeppelin | viem is the cleanest TS client. Foundry tests run in seconds and deploy with one command. |
 | Cut | Offline scanner queue, Telegram audit, holdback, multi-event, wallet connect, upgradeable contracts | Each one is a stretch goal, only if the core gates pass. |
 
 ## Do these now (before any coding)
 
-1. **DNS:** point an A record such as `headcount.rhomuel.com` at the VPS. Fallback: `headcount.<VPS-IP-with-dashes>.sslip.io` gets HTTPS from Caddy with no DNS setup.
+1. **DNS:** selected hostname `headcount.zymo.qzz.io` must point to `rhm-server-eu` (`91.99.141.229`). Use the existing Nginx and isolated site described in `04-deploy.md`.
 2. **Base Sepolia RPC key** (Alchemy free tier). `https://sepolia.base.org` works but rate-limits.
 3. **Foundry plus a funded operator:** `foundryup`, then `cast wallet new`, then 0.1 Base Sepolia ETH from the Coinbase Developer Platform faucet. At L2 gas prices that covers hundreds of check-ins. Claim from a second faucet (Alchemy, QuickNode) too, as a buffer.
 4. **Publish the local repository to a public GitHub repo and commit often.** Local Git initialization is tracked in `docs/STATUS.md`; publication remains a separate task. Your commit history is your proof of no pre-work.

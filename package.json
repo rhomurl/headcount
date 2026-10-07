@@ -14,7 +14,8 @@
     "test": "vitest run",
     "test:contracts": "cd contracts && node tools/forge.cjs test",
     "smoke": "node --conditions=react-server --import tsx scripts/smoke.ts",
-    "test:local": "node tests/support/local-flow.mjs"
+    "test:local": "node tests/support/local-flow.mjs",
+    "preflight": "node --import tsx scripts/preflight.ts"
   },
   "dependencies": {
     "@fontsource/inter": "5.3.0",

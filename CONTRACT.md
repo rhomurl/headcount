@@ -158,3 +158,7 @@ CREATE TABLE IF NOT EXISTS checkins (
 - Closure requires every accepted check-in to be confirmed. Pending returns `payouts_pending`; failed/unreconciled returns `payouts_unsettled`. Restart-interrupted jobs are failed and remain discoverable/retryable, and fence closure until settled.
 - Stats includes `failedFeed`, all failed check-ins bounded by campaign cap (maximum 1,000), independently of the latest-20 activity feed. The UI always offers recovery for these rows while open.
 - `isCampaignClosed` reconciles direct sponsor closure before accepting mutations and during status reads. Observed chain closure is persisted with the recovered receipt, or as `closing` while receipt recovery is unavailable. A sponsor transaction racing a just-accepted scan can still cause a failed payout; the operator cannot prohibit the sponsor's on-chain close with this contract design.
+
+## Selected deployment target
+
+The requested hostname is `https://headcount.zymo.qzz.io`, on SSH alias `rhm-server-eu`. This VPS already uses Nginx for HTTPS on ports 80/443. Headcount will use an isolated Nginx virtual host proxying to its one Node/PM2 process at `127.0.0.1:3100`. This adapts the earlier Caddy deployment plan to the existing host; application/chain interfaces and all payout invariants stay the same.

@@ -2,7 +2,7 @@
 
 Sponsor-funded attendance payouts on Base Sepolia. A sponsor funds an escrow campaign with test hUSDC, guests RSVP without a wallet, and a host scans rotating QR tickets. The operator submits accepted check-ins to the escrow contract, which pays the registered host once per ticket. Closing a campaign refunds the remaining balance to its sponsor.
 
-**Status:** MVP implemented and verified locally on `codex/headcount-mvp`. 51 app tests, 15 contract tests, production build, and the real local-chain API flow pass. Base Sepolia/VPS deployment and real-phone camera checks remain unverified. See [implementation status](docs/STATUS.md).
+**Status:** MVP implemented and verified locally on `codex/headcount-mvp`. 57 app/preflight tests, 15 contract tests, production build, and the real local-chain API flow pass. Deployment preparation targets `rhm-server-eu` and `https://headcount.zymo.qzz.io`; Base Sepolia/VPS deployment and real-phone camera checks remain unverified. See [implementation status](docs/STATUS.md).
 
 ## Start here
 
@@ -14,7 +14,7 @@ Sponsor-funded attendance payouts on Base Sepolia. A sponsor funds an escrow cam
 
 ## Stack
 
-Next.js App Router, TypeScript, Tailwind, better-sqlite3, viem v2, and Solidity contracts built with Foundry and OpenZeppelin. The app runs as one Node server on a VPS behind Caddy, using one operator wallet and one serial transaction queue.
+Next.js App Router, TypeScript, Tailwind, better-sqlite3, viem v2, and Solidity contracts built with Foundry and OpenZeppelin. The app runs as one Node server on a VPS behind its existing Nginx, using one operator wallet and one serial transaction queue.
 
 The MVP targets **Base Sepolia, chain ID 84532**, with a **6-decimal mock token, hUSDC**. It is a testnet demo. The operator decides whether a check-in occurred; the planned escrow limits payout destinations and prevents duplicate ticket payments. Rotating codes limit old screenshot reuse, but do not prove physical attendance or prevent collusion. QR verification accepts the current or previous 30-second window.
 
@@ -34,6 +34,7 @@ The UI starts without a wallet. Creating/funding campaigns and payouts require t
 npm test
 npm run typecheck
 npm run lint
+npm run preflight                      # after deployment environment is configured
 npm run build
 npm run test:contracts
 # After a successful build, run real loopback-chain integration:

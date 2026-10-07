@@ -16,3 +16,4 @@ Record meaningful implemented changes here. Plans and incomplete work belong in 
 - Mobile create, RSVP, ticket, scanner and sponsor dashboard pages with public receipt links.
 - Closure recovery fences, direct-chain closure reconciliation and recovery controls for older failed payouts.
 - 51 app tests, 15 contract tests, loopback real-chain integration harness and verified desktop/mobile screenshots.
+- Credential-safe environment preflight with six tests, Node 24 single-fork PM2 configuration, and isolated Nginx bootstrap/HTTPS examples for the selected VPS and hostname.

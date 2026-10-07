@@ -1,0 +1,21 @@
+# HTTP-only certificate bootstrap for Headcount on the existing Nginx.
+# Add as a separate site; preserve all other vhosts and their listener settings.
+# Enable this OR nginx.conf.example, never both for this server_name.
+# Create the challenge webroot and point DNS here before requesting a certificate.
+# Validate the full Nginx configuration before reload. Replace this bootstrap
+# with the HTTPS example after certificate provisioning and app preflight pass.
+server {
+    listen 80;
+    listen [::]:80;
+    server_name headcount.zymo.qzz.io;
+
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/headcount-acme;
+        try_files $uri =404;
+    }
+
+    # Do not expose the unconfigured app while certificate setup is pending.
+    location / {
+        return 503;
+    }
+}

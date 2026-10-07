@@ -11,7 +11,8 @@ Last updated: 7 October 2026 (Asia/Manila).
 | Contracts/chain adapter | Implemented and locally verified | Solidity 0.8.24; 15 Foundry tests; real adapter in loopback Anvil flow |
 | Database/API | Implemented and locally verified | 16 API/QR tests; real SQLite + real-chain API flow |
 | UI | Implemented; automated local checks verified | 10 UI tests; desktop/mobile render and scanner PIN gate; screenshots in `screenshots/` |
-| Integration | Locally verified | 51 app tests plus loopback real receipts, host payout and sponsor refund |
+| Integration | Locally verified | 57 app/preflight tests plus prior loopback real receipts, host payout and sponsor refund |
+| Deployment preparation | Configurations verified; prerequisites pending | `rhm-server-eu` (91.99.141.229), isolated Nginx templates and Node 24 PM2 config; wallet choice and DNS pending |
 | GitHub publication | Not performed | No push, public repository or remote verified during implementation |
 | Contract deployment | Not performed on Base Sepolia | Ephemeral Anvil deployment is local test evidence only |
 | VPS deployment | Not performed | HTTPS camera flow with two real phones remains required |
@@ -51,3 +52,15 @@ All commands used Node 24.19.0 (bundled runtime added to PATH):
 Configure dedicated testnet operator credentials/funding, RPC provisioning and deployed mock-token/escrow addresses. Then authorize/run the explicit-opt-in Base Sepolia smoke test and record explorer receipts. Publication, DNS, VPS/HTTPS deployment, real-phone camera verification and submission artifacts require separate work. The local preview has chain credentials disabled and cannot create funded campaigns.
 
 No Base Sepolia transactions, external deployment or publication occurred in this implementation run.
+
+## Deployment preparation evidence
+
+- Selected target: `rhm-server-eu`, public origin `https://headcount.zymo.qzz.io`. Read-only SSH verified ARM64, Node 24.18.0, PM2, existing Nginx/Certbot and free port 3100. `/root/headcount` did not exist at discovery. Other running apps were preserved.
+- Existing ingress is Nginx, so deployment uses a separate vhost rather than adding Caddy on occupied ports 80/443. The shared specification and task packs reflect this infrastructure change.
+- `npm test`: 9 files, **57 passed**, including six environment-preflight tests. `npm run typecheck` and `npm run lint`: exit 0. `npm run preflight` with no private environment: expected exit 1, fixed missing-field errors without credential values.
+- PM2 configuration checked under Node 24: one fork, absolute interpreter/script paths, loopback port 3100. Node 23 rejects the configuration as intended. No process started.
+- Both Nginx examples passed `nginx -t` in an isolated temporary VPS configuration. HTTPS syntax validation used a temporary self-signed certificate only. Files and key were removed; no sites enabled and no reload performed. Existing full VPS configuration also passed, with pre-existing protocol-option warnings for unrelated RSS/travel sites.
+- Deployment review identified response timeout risk for queued transactions; the example now sets 300-second read/send timeouts. An arbitrarily long queue can still time out after a mutation succeeds. Unreceived create responses have no client recovery identifier and require operator reconciliation; this remains a limitation.
+- DNS returned NXDOMAIN through the local resolver and Cloudflare DoH. Required A record: `headcount.zymo.qzz.io` → `91.99.141.229`. No certificate issued for this hostname.
+- GitHub identity `rhomurl` verified; `rhomurl/headcount` did not exist and no remote was configured. No public repository created.
+- Dedicated-wallet versus existing-environment choice remains unanswered. No operator key generated, private environment copied, testnet transaction sent or public app activated during preparation.

@@ -2,19 +2,15 @@
 
 Paste this whole file to your coding agent. Read `CONTRACT.md` first. Only touch the files listed in the title plus `package.json` scripts.
 
-## 0. Prereqs (human does this, 5 min)
-```bash
-curl -L https://foundry.paradigm.xyz | bash && foundryup
-cast wallet new                     # copy the address + private key into .env.local as OPERATOR_PRIVATE_KEY
-```
-Fund the operator address with Base Sepolia ETH from the Coinbase Developer Platform faucet (0.1 ETH/day, which is plenty because L2 gas is tiny). Backups: Alchemy, QuickNode, thirdweb faucets.
+## 0. Current tooling and deployment prerequisites
+
+The Foundry project already exists inside `contracts/` without a nested repository. Use Node 24 and `npm ci`; the lockfile provides Foundry, Solidity 0.8.24 and OpenZeppelin. Do not reinitialize the project or install a separate global toolchain for this repository.
+
+Select a dedicated Base Sepolia operator and fund its public address with testnet ETH. Store its private key in ignored `.env.local` with mode 600; never print it or pass it as a CLI argument. Wallet selection and funding are separate deployment prerequisites recorded in `STATUS.md`.
 
 ## 1. Contracts (Foundry)
-```bash
-mkdir contracts && cd contracts && forge init --no-git --no-commit .
-forge install OpenZeppelin/openzeppelin-contracts --no-git
-```
-Remapping: `@openzeppelin/=lib/openzeppelin-contracts/`. Solidity `^0.8.24`.
+
+Run `npm run test:contracts` from the repository root, or `node tools/forge.cjs test` from `contracts/`. The native-binary wrapper propagates Foundry failures correctly. The existing remapping resolves `@openzeppelin/contracts/` from the pinned npm dependency.
 
 - `MockUSDC.sol`: `ERC20("Headcount Test USD","hUSDC")`, `Ownable`. Override `decimals()` to return 6. `mint(address,uint256) onlyOwner`.
 - `HeadcountEscrow.sol`: exactly the CONTRACT interface. `token` and `operator` are `immutable`. Use `SafeERC20`. Update state before transfers. Use custom errors: `NotOperator, NotAuthorized, Exists, NoCampaign, Closed, AlreadyPaid, CapReached, Insufficient, ZeroAddress`.
@@ -27,13 +23,13 @@ Remapping: `@openzeppelin/=lib/openzeppelin-contracts/`. Solidity `^0.8.24`.
   6. checkIn after close reverts.
 - `script/Deploy.s.sol`: deploy MockUSDC with the deployer as owner. Deploy `HeadcountEscrow(token, deployer)`. Mint 1,000,000e6 to the deployer. `approve(escrow, type(uint256).max)`. Log both addresses.
 
-```bash
-forge test
-forge script script/Deploy.s.sol --rpc-url $RPC_URL --private-key $OPERATOR_PRIVATE_KEY --broadcast
-```
-Put `TOKEN_ADDRESS`, `ESCROW_ADDRESS` and `NEXT_PUBLIC_ESCROW_ADDRESS` into `.env.local`.
+From the repository root, once operator funding is verified and testnet deployment is authorized:
 
-Optional (10 min, good for credibility with judges): add `--verify --etherscan-api-key $ETHERSCAN_KEY` (one Etherscan v2 key covers Basescan) so judges can read the source on the explorer.
+```bash
+node --env-file=.env.local contracts/tools/forge.cjs script script/Deploy.s.sol --rpc-url https://sepolia.base.org --broadcast
+```
+
+This command uses the public Base Sepolia RPC. For a provisioned endpoint, load the RPC through a private environment/profile without copying credential-bearing URLs into shared logs. `Deploy.s.sol` rejects chain IDs other than 84532 and reads the signing key from its environment. Record each successful receipt and put `TOKEN_ADDRESS`, `ESCROW_ADDRESS` and matching `NEXT_PUBLIC_ESCROW_ADDRESS` into the private environment before an app build. Broadcast records are ignored.
 
 ## 2. lib/money.ts
 `DECIMALS = 6`; `toBase(ui: number): bigint` uses `BigInt(Math.round(ui * 1e6))`; `toUi(base: bigint): number`.
@@ -59,7 +55,7 @@ Optional (10 min, good for credibility with judges): add `--verify --etherscan-a
 - `isPaid`: `readContract paid(checkinKey)`.
 - When a write reverts, surface the custom error name in the thrown message (`err.shortMessage` or the decoded error) so `checkins.error` is readable.
 
-## 4. scripts/smoke.ts (the gate; run with `npx tsx scripts/smoke.ts`)
+## 4. scripts/smoke.ts (the gate; run with `npm run smoke -- --send-testnet-transactions`)
 1. Load `.env.local` with dotenv. Create a campaign with a random id (cap 10, perHead 5). The sponsor and host are fresh random addresses (`privateKeyToAccount(generatePrivateKey()).address`).
 2. `fundCampaign(id, toBase(50))`, then log the balance. It should be 50.
 3. `payCheckin(id, "t1")`, then log the Basescan link. The balance should be 45 and `isPaid` should be true.
@@ -68,7 +64,7 @@ Optional (10 min, good for credibility with judges): add `--verify --etherscan-a
 6. Exit 0. Any unexpected error exits 1.
 
 ## Done when
-`forge test` is green and `smoke.ts` prints a Basescan link showing a `CheckedIn` event plus a 5 hUSDC transfer to the host. Commit.
+`npm run test:contracts` is green and `smoke.ts` prints a Basescan link showing a `CheckedIn` event plus a 5 hUSDC transfer to the host. Commit.
 
 ## Fallback (only if contract deploy is still broken at T+1:30)
 Keep the exact `lib/chain.ts` exports, but implement them as plain ERC20 `transfer` calls from the operator wallet, with campaign balances tracked in SQLite. The rest of the app doesn't change. Say "custodial v0" on the slide.
