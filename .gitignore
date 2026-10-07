@@ -1,0 +1,48 @@
+# macOS / editor artifacts
+.DS_Store
+._*
+*.swp
+*.swo
+.idea/
+
+# Credentials and local environment (keep placeholder templates)
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+
+# Node / Next.js / TypeScript generated files
+node_modules/
+.next/
+out/
+dist/
+build/
+coverage/
+.turbo/
+*.tsbuildinfo
+next-env.d.ts
+
+# Runtime data, SQLite sidecars, logs, and local backups
+/data/
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+*.log
+/logs/
+/backups/
+.pm2/
+
+# Foundry outputs, caches, and broadcast records
+/contracts/out/
+/contracts/cache/
+/contracts/broadcast/
+
+# Browser test output
+/playwright-report/
+/test-results/
+/.playwright-cli/
