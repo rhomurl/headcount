@@ -12,9 +12,9 @@ Last updated: 7 October 2026 (Asia/Manila).
 | Database/API | Implemented and locally verified | 16 API/QR tests; real SQLite + real-chain API flow |
 | UI | Implemented; automated local checks verified | 10 UI tests; desktop/mobile render and scanner PIN gate; screenshots in `screenshots/` |
 | Integration | Locally verified | 57 app/preflight tests plus prior loopback real receipts, host payout and sponsor refund |
-| Deployment preparation | Source/dependencies staged; funding and DNS pending | `rhm-server-eu` (91.99.141.229), verified Nginx/PM2 config and fresh dedicated local operator |
+| Deployment preparation | Prerequisites verified; activation in progress | Funded operator, DNS A record, successful chain smoke and issued Let's Encrypt certificate |
 | GitHub publication | Not performed | No push, public repository or remote verified during implementation |
-| Contract deployment | Not performed on Base Sepolia | Ephemeral Anvil deployment is local test evidence only |
+| Contract deployment | Deployed and receipt-verified on Base Sepolia | Token/escrow plus mint/approval receipts; owner/operator and decimals checked; live smoke passed |
 | VPS deployment | Source staged; app not activated | Source `6ff5d64` in `/root/headcount`; configured build, HTTPS and two-phone flow remain required |
 | Submission assets | Not completed | Live URL, public repository, deck and backup video remain separate |
 
@@ -49,7 +49,7 @@ All commands used Node 24.19.0 (bundled runtime added to PATH):
 
 ## Remaining gates
 
-Fund the dedicated testnet operator, then deploy mock-token/escrow contracts and configure their addresses. Run the explicit-opt-in Base Sepolia smoke test within the authorized integration task and record explorer receipts. Publication, DNS, VPS/HTTPS activation, real-phone camera verification and submission artifacts require separate work. The local preview has chain credentials disabled and cannot create funded campaigns.
+Finish the corrected VPS build, start one loopback PM2 process, activate its isolated HTTPS proxy, and verify the live API/receipt flow. Real-phone camera verification, publication and submission artifacts remain separate gates. The old local preview has chain credentials disabled.
 
 No Base Sepolia transactions, external deployment or publication occurred in this implementation run.
 
@@ -66,3 +66,15 @@ No Base Sepolia transactions, external deployment or publication occurred in thi
 - Staged source commit `6ff5d64` in the newly created `/root/headcount`, verifying archive SHA-256 before extraction. `npm ci` completed on ARM64 Node 24.18.0. All 57 tests, typecheck and lint passed on the VPS, including actual SQLite tests. PM2 configuration passed its structure check. No `.env.local` or `.next` installed there, port 3100 remains free, and all five existing PM2 apps remain online. No app started or Nginx reloaded.
 - No existing operator environment was provided, so preparation defaulted to a fresh dedicated testnet wallet after the preference question remained unanswered. Created local ignored `.env.local` with mode 600; no key printed or transferred. Public operator: `0x7E61f0f43e264151353779213be73421Df0E99c8`. Read-only RPC check verified chain ID 84532 and **0 testnet ETH**. No transaction sent. This unused wallet can be replaced if the user supplies an existing environment before deployment.
 - Local `npm run preflight` now reports only the three missing contract-address fields (expected exit 1). Operator funding, DNS and deployed contracts remain required before activation.
+
+## Live chain / activation evidence
+
+- User completed DNS/funding, then explicitly authorized private operator environment transfer to `rhm-server-eu` after automatic approval review rejected the initial transfer. The rejected attempt transferred nothing; the subsequently authorized SSH transfer succeeded. Private environment remains mode 600 and ignored.
+- DNS A resolves to `91.99.141.229`, no AAAA. RPC chain ID 84532 and operator funding 0.0005 testnet ETH verified before deployment. Simulation estimated 0.0000224323 ETH.
+- `Deploy.s.sol --broadcast` succeeded. Verified all four receipts independently, bytecode presence, token owner/operator equal the dedicated address, six decimals, initial 1,000,000 hUSDC mint and max allowance to escrow.
+- Mock hUSDC: [0xa5c8abb9c233016f0ee2010c17bb287bfa7d5257](https://sepolia.basescan.org/address/0xa5c8abb9c233016f0ee2010c17bb287bfa7d5257), deployment [receipt](https://sepolia.basescan.org/tx/0x74f3e2583fdad41422cd96c688f10f6f67661f12c026595ae3e8ea7259b6e3a0).
+- Escrow: [0xb2027a52ca63875a81adde0676231028bf993336](https://sepolia.basescan.org/address/0xb2027a52ca63875a81adde0676231028bf993336), deployment [receipt](https://sepolia.basescan.org/tx/0xbe0a03fbf8d4b733cf57679e89ae3504df832f366477be69a2b5b6319b58b43b). Explorer source verification was not performed.
+- Initial smoke failed `NoCampaign` after successful create. Diagnostic proved stale `latest` reads and a separate -32001 block-unavailable condition. Adapter now uses a global receipt floor plus uncached numeric head, with six fixed-height read attempts and five one-second waits for block/resource-not-found errors only. Writes are never retried. Independent review passed; 21 chain tests include regressions. Full suite: **62 passed**, lint/typecheck exit 0.
+- Corrected `npm run smoke -- --send-testnet-transactions`: exit 0. Funded 50 hUSDC, paid host 5, duplicate rejected, remaining 45 refunded and escrow campaign balance zero. [Payout receipt](https://sepolia.basescan.org/tx/0x1fd26cacfb3773d86f146b99619b2633174ecfd1375da695b38a9a45c07ee21c), [close/refund receipt](https://sepolia.basescan.org/tx/0x1842ff7b355cafe65d274a506ee2100f47e9c7bb44d1c12016f70fcd97c5e7f8).
+- Isolated HTTP bootstrap enabled and validated; ACME challenge probe passed. Certificate issued by Let's Encrypt using the existing account, SAN/hostname/expiry checks passed. Expires 5 January 2027 at 15:51:13 Asia/Manila. Public HTTP intentionally returns 503 until app activation; HTTPS proxy not yet enabled.
+- Initial VPS production build with real public escrow succeeded. Corrected adapter rebuild/activation is in progress. No app wallet writer runs while the chain smoke/reconciliation script uses the operator.

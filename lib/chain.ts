@@ -1,6 +1,6 @@
 import "server-only";
 import {
-  BaseError, ContractFunctionRevertedError, createPublicClient, createWalletClient,
+  BaseError, BlockNotFoundError, ContractFunctionRevertedError, ResourceNotFoundRpcError, createPublicClient, createWalletClient,
   http, isAddress, keccak256, parseAbi, toHex, type Hex,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
@@ -34,7 +34,7 @@ const zero = "0x0000000000000000000000000000000000000000";
 // Next hot reload can reevaluate this module while a prior call is in flight.
 // Symbol.for keeps one queue for the entire process, including those evaluations.
 const queueKey = Symbol.for("headcount.operator.transaction.queue.v1");
-const processState = globalThis as unknown as { [key: symbol]: { tail: Promise<unknown> } | undefined };
+const processState = globalThis as unknown as { [key: symbol]: { tail: Promise<unknown>; confirmedBlock?: bigint } | undefined };
 const queue = processState[queueKey] ??= { tail: Promise.resolve() };
 function enqueue<T>(fn: () => Promise<T>): Promise<T> {
   const run = queue.tail.then(fn, fn);
@@ -87,7 +87,31 @@ async function withChain<T>(fn: (clients: Clients) => Promise<T>): Promise<T> {
 async function successfulReceipt(clients: Clients, hash: Hex): Promise<Hex> {
   const receipt = await clients.publicClient.waitForTransactionReceipt({ hash });
   if (receipt.status !== "success") throw new ChainError("Transaction reverted");
+  if (receipt.blockNumber > (queue.confirmedBlock ?? 0n)) queue.confirmedBlock = receipt.blockNumber;
   return hash;
+}
+async function readBlock(clients: Clients): Promise<bigint> {
+  // Hosted RPC "latest" calls can lag a receipt, even when the head is current.
+  // Numeric blocks bypass that ambiguity; advance the head to observe external
+  // sponsor writes, while never reading before our last confirmed transaction.
+  const head = await clients.publicClient.getBlockNumber({ cacheTime: 0 });
+  const floor = queue.confirmedBlock ?? 0n;
+  return head > floor ? head : floor;
+}
+async function readAtBlock<T>(clients: Clients, read: (blockNumber: bigint) => Promise<T>): Promise<T> {
+  const block = await readBlock(clients);
+  for (let attempt = 0; ; attempt++) {
+    try { return await read(block); }
+    catch (error) {
+      // Different RPC backends may not yet have the reported block. Retry only
+      // this read, at the same height, with at most five one-second waits. Never retry a
+      // write or mask a revert/unrelated transport failure.
+      const unavailable = error instanceof BaseError && error.walk((cause) =>
+        cause instanceof ResourceNotFoundRpcError || cause instanceof BlockNotFoundError);
+      if (!unavailable || attempt === 5) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 1_000));
+    }
+  }
 }
 function campaignKey(id: string): Hex {
   if (!id) throw new ChainError("Invalid campaign ID");
@@ -103,8 +127,8 @@ function validAmount(amount: bigint): void {
   }
 }
 async function campaign(clients: Clients, id: string) {
-  const state = await clients.publicClient.readContract({ address: clients.escrow, abi: escrowAbi,
-    functionName: "campaigns", args: [campaignKey(id)] });
+  const state = await readAtBlock(clients, (blockNumber) => clients.publicClient.readContract({ address: clients.escrow, abi: escrowAbi,
+    functionName: "campaigns", args: [campaignKey(id)], blockNumber }));
   if (!state[6]) throw new ChainError("NoCampaign");
   return state;
 }
@@ -134,8 +158,8 @@ export function fundCampaign(campaignId: string, amount: bigint): Promise<Hex> {
     if (state[3] + amount > MAX_UINT128) throw new ChainError("InvalidAmount");
     // Approval, mint and fund are one queue job. Each stage must confirm before
     // the next stage or another operator transaction can begin.
-    const allowance = await clients.publicClient.readContract({ address: clients.token, abi: tokenAbi,
-      functionName: "allowance", args: [clients.account.address, clients.escrow] });
+    const allowance = await readAtBlock(clients, (blockNumber) => clients.publicClient.readContract({ address: clients.token, abi: tokenAbi,
+      functionName: "allowance", args: [clients.account.address, clients.escrow], blockNumber }));
     if (allowance < amount) {
       await successfulReceipt(clients, await clients.walletClient.writeContract({ address: clients.token,
         abi: tokenAbi, functionName: "approve", args: [clients.escrow, MAX_UINT256] }));
@@ -155,8 +179,8 @@ export function isCampaignClosed(campaignId: string): Promise<boolean> {
   return withChain(async (clients) => (await campaign(clients, campaignId))[7]);
 }
 export function isPaid(campaignId: string, ticketId: string): Promise<boolean> {
-  return withChain((clients) => clients.publicClient.readContract({ address: clients.escrow, abi: escrowAbi,
-    functionName: "paid", args: [ticketKey(campaignId, ticketId)] }));
+  return withChain((clients) => readAtBlock(clients, (blockNumber) => clients.publicClient.readContract({ address: clients.escrow, abi: escrowAbi,
+    functionName: "paid", args: [ticketKey(campaignId, ticketId)], blockNumber })));
 }
 export function payCheckin(campaignId: string, ticketId: string): Promise<Hex> {
   return enqueue(() => withChain(async (clients) => {
@@ -171,7 +195,7 @@ export function closeCampaignOnchain(campaignId: string): Promise<Hex> {
     if (state[7]) {
       // A prior close may have landed before its RPC response was lost. Recover
       // recent receipts in bounded ranges acceptable to hosted RPC providers.
-      let end = await clients.publicClient.getBlockNumber();
+      let end = await readBlock(clients);
       for (let window = 0; window < 10; window++) {
         const start = end > 1_999n ? end - 1_999n : 0n;
         const logs = await clients.publicClient.getContractEvents({ address: clients.escrow, abi: escrowAbi,

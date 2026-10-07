@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { BaseError, ResourceNotFoundRpcError } from "viem";
 
 const fake = vi.hoisted(() => ({
   write: vi.fn(), receipt: vi.fn(), chainId: vi.fn(), read: vi.fn(), logs: vi.fn(), block: vi.fn(),
@@ -17,6 +18,7 @@ const host = "0x0000000000000000000000000000000000000200";
 const campaign = [sponsor, host, 5_000_000n, 50_000_000n, 10, 0, true, false];
 
 beforeEach(() => {
+  Reflect.deleteProperty(globalThis, Symbol.for("headcount.operator.transaction.queue.v1"));
   vi.resetModules();
   vi.clearAllMocks();
   process.env.RPC_URL = "http://127.0.0.1:8545";
@@ -25,13 +27,72 @@ beforeEach(() => {
   process.env.ESCROW_ADDRESS = "0x0000000000000000000000000000000000000400";
   fake.chainId.mockResolvedValue(84532);
   fake.write.mockResolvedValue(hash);
-  fake.receipt.mockResolvedValue({ status: "success" });
+  fake.receipt.mockResolvedValue({ status: "success", blockNumber: 100_000n });
   fake.read.mockImplementation(({ functionName }) => Promise.resolve(functionName === "campaigns" ? campaign : functionName === "allowance" ? 2n ** 256n - 1n : false));
   fake.logs.mockResolvedValue([{ transactionHash: hash }]);
   fake.block.mockResolvedValue(100_000n);
 });
 
 describe("real chain boundary with test-only transport doubles", () => {
+  it("retries unavailable numeric-block reads at the same block without repeating writes", async () => {
+    const wrapped = new BaseError("read failed", { cause: new ResourceNotFoundRpcError(new Error("block not found")) });
+    fake.read.mockRejectedValueOnce(wrapped);
+    const chain = await import("../lib/chain");
+    await expect(chain.getCampaignBalance("c")).resolves.toBe(50_000_000n);
+    expect(fake.read).toHaveBeenCalledTimes(2);
+    expect(fake.read.mock.calls[0][0].blockNumber).toBe(fake.read.mock.calls[1][0].blockNumber);
+    expect(fake.block).toHaveBeenCalledTimes(1);
+    expect(fake.write).not.toHaveBeenCalled();
+  });
+  it("does not retry unrelated read errors", async () => {
+    fake.read.mockRejectedValueOnce(new BaseError("transport secret", { cause: new Error("unrelated failure") }));
+    const chain = await import("../lib/chain");
+    await expect(chain.getCampaignBalance("c")).rejects.toThrow("Chain request failed");
+    expect(fake.read).toHaveBeenCalledTimes(1);
+    expect(fake.write).not.toHaveBeenCalled();
+  });
+  it("bounds unavailable-block retries and sanitizes the final failure", async () => {
+    fake.read.mockRejectedValue(new BaseError("private RPC detail", { cause: new ResourceNotFoundRpcError(new Error("block not found")) }));
+    const chain = await import("../lib/chain");
+    vi.useFakeTimers();
+    try {
+      const result = expect(chain.getCampaignBalance("c")).rejects.toThrow("Chain request failed");
+      await vi.runAllTimersAsync();
+      await result;
+      expect(fake.read).toHaveBeenCalledTimes(6);
+      expect(fake.write).not.toHaveBeenCalled();
+    } finally { vi.useRealTimers(); }
+  });
+  it("reads at least the confirmed receipt block when latest and the reported head lag", async () => {
+    const receiptBlock = 100_001n;
+    fake.receipt.mockResolvedValue({ status: "success", blockNumber: receiptBlock });
+    fake.block.mockResolvedValue(receiptBlock - 1n);
+    fake.read.mockImplementation(({ functionName, blockNumber }) => Promise.resolve(
+      functionName === "campaigns" ? (blockNumber >= receiptBlock ? campaign : [...campaign.slice(0, 6), false, false])
+        : functionName === "allowance" ? 2n ** 256n - 1n : blockNumber >= receiptBlock,
+    ));
+    const chain = await import("../lib/chain");
+    await chain.createCampaignOnchain("c", sponsor, host, 5_000_000n, 10);
+    await expect(chain.fundCampaign("c", 50_000_000n)).resolves.toBe(hash);
+    await expect(chain.getCampaignBalance("c")).resolves.toBe(50_000_000n);
+    await expect(chain.isPaid("c", "t")).resolves.toBe(true);
+    for (const [call] of fake.read.mock.calls) expect(call.blockNumber).toBe(receiptBlock);
+    expect(fake.block).toHaveBeenCalledWith({ cacheTime: 0 });
+  });
+  it("keeps the read floor through reload and advances to observe an external close", async () => {
+    fake.receipt.mockResolvedValue({ status: "success", blockNumber: 100_001n });
+    fake.block.mockResolvedValue(100_000n);
+    const chain = await import("../lib/chain");
+    await chain.payCheckin("c", "t");
+    vi.resetModules();
+    const reloaded = await import("../lib/chain");
+    await reloaded.getCampaignBalance("c");
+    expect(fake.read).toHaveBeenLastCalledWith(expect.objectContaining({ blockNumber: 100_001n }));
+    fake.block.mockResolvedValue(100_010n);
+    fake.read.mockImplementation(({ blockNumber }) => Promise.resolve([...campaign.slice(0, 7), blockNumber >= 100_010n]));
+    await expect(reloaded.isCampaignClosed("c")).resolves.toBe(true);
+    expect(fake.read).toHaveBeenLastCalledWith(expect.objectContaining({ blockNumber: 100_010n }));
+  });
   it("loads without secrets and fails only when a configured operation is attempted", async () => {
     delete process.env.OPERATOR_PRIVATE_KEY;
     const chain = await import("../lib/chain");
@@ -41,15 +102,17 @@ describe("real chain boundary with test-only transport doubles", () => {
   });
   it("rejects a reverted receipt and the queue recovers for the next write", async () => {
     const chain = await import("../lib/chain");
-    fake.receipt.mockResolvedValueOnce({ status: "reverted" });
+    fake.receipt.mockResolvedValueOnce({ status: "reverted", blockNumber: 200_000n });
     const first = chain.payCheckin("c", "t1");
     const next = chain.payCheckin("c", "t2");
     await expect(first).rejects.toThrow("reverted");
     await expect(next).resolves.toBe(hash);
+    await chain.getCampaignBalance("c");
+    expect(fake.read).toHaveBeenLastCalledWith(expect.objectContaining({ blockNumber: 100_000n }));
     expect(fake.write).toHaveBeenCalledTimes(2);
   });
   it("serializes through receipt completion and across a module reload", async () => {
-    let finish!: (value: { status: string }) => void;
+    let finish!: (value: { status: string; blockNumber: bigint }) => void;
     fake.receipt.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
     const chain = await import("../lib/chain");
     const first = chain.payCheckin("c", "t1");
@@ -59,7 +122,7 @@ describe("real chain boundary with test-only transport doubles", () => {
     const second = reloaded.closeCampaignOnchain("c");
     await new Promise((resolve) => setTimeout(resolve, 10));
     expect(fake.write).toHaveBeenCalledTimes(1);
-    finish({ status: "success" });
+    finish({ status: "success", blockNumber: 100_000n });
     await Promise.all([first, second]);
     expect(fake.write).toHaveBeenCalledTimes(2);
   });
@@ -85,7 +148,7 @@ describe("real chain boundary with test-only transport doubles", () => {
   });
   it("rejects a reverted fund receipt instead of returning a success hash", async () => {
     const chain = await import("../lib/chain");
-    fake.receipt.mockResolvedValueOnce({ status: "success" }).mockResolvedValueOnce({ status: "reverted" });
+    fake.receipt.mockResolvedValueOnce({ status: "success", blockNumber: 100_000n }).mockResolvedValueOnce({ status: "reverted" });
     await expect(chain.fundCampaign("c", 1n)).rejects.toThrow("reverted");
     expect(fake.write.mock.calls.map(([call]) => call.functionName)).toEqual(["mint", "fund"]);
   });

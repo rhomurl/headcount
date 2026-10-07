@@ -152,6 +152,7 @@ CREATE TABLE IF NOT EXISTS checkins (
 - Solidity cannot declare an error and event named `Closed` in the same contract namespace. The custom error is namespaced in a library, preserving the specified error/event ABI names. Zero amounts and caps use `InvalidAmount` and `InvalidCap` errors.
 - Money inputs must be finite, positive where required, representable as safe integer base units, and use at most six decimals. Database integer reads use bigint; IDs, timestamps and counts are converted only within safe bounds.
 - Chain environment configuration is lazy and server-only; local build and tests do not require a populated wallet. Production chain functions always use the real adapter. Test transport mocks are confined to tests.
+- Hosted RPC `latest` reads were observed lagging successful receipts. The global process state retains the highest successful receipt block; campaign, allowance and paid reads use a numeric block at least that high and advance with an uncached head to observe external writes. A temporarily unavailable numeric block is retried read-only at the same height, with six attempts and five one-second waits. Reverts/unrelated errors fail immediately; writes are never retried automatically.
 
 - Idempotent close recovery searches at most 20,000 recent blocks in 2,000-block windows. An older closed campaign with a missing local close receipt remains `closing` and requires operator reconciliation from explorer evidence.
 

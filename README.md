@@ -2,7 +2,7 @@
 
 Sponsor-funded attendance payouts on Base Sepolia. A sponsor funds an escrow campaign with test hUSDC, guests RSVP without a wallet, and a host scans rotating QR tickets. The operator submits accepted check-ins to the escrow contract, which pays the registered host once per ticket. Closing a campaign refunds the remaining balance to its sponsor.
 
-**Status:** MVP implemented and verified locally on `codex/headcount-mvp`. 57 app/preflight tests, 15 contract tests, production build, and the real local-chain API flow pass. Source/dependencies are staged on `rhm-server-eu`, targeting `https://headcount.zymo.qzz.io`; funding, DNS, contract deployment, app activation and real-phone camera checks remain pending. See [implementation status](docs/STATUS.md).
+**Status:** MVP implemented on `codex/headcount-mvp`. 62 app/preflight tests and 15 contract tests pass. Contracts are deployed on Base Sepolia and the live payout/refund smoke passes. VPS/HTTPS activation at `https://headcount.zymo.qzz.io` is in progress; real-phone camera checks remain pending. See [implementation status](docs/STATUS.md).
 
 ## Start here
 

@@ -35,7 +35,27 @@ Contract deployment needs a funded dedicated operator and successful Base Sepoli
 - Public DNS queried through the local resolver and Cloudflare DoH: NXDOMAIN for `headcount.zymo.qzz.io`.
 - Dedicated local operator `0x7E61f0f43e264151353779213be73421Df0E99c8`: public RPC reports chain ID 84532 and zero testnet ETH. Funding is required. Key exists only in ignored mode-600 `.env.local`; no existing environment was provided and this unused wallet can be replaced before deployment.
 
-## Verification
+## Activation plan (7 October 2026)
+
+The user reports both DNS and operator funding prerequisites complete and asks to continue the previously authorized deployment. Verify both live before proceeding.
+
+- Coordinator: deploy the existing audited/tested contracts on Base Sepolia only, record successful receipts and public addresses, update the private environment without printing keys, run the opted-in chain smoke with the app stopped.
+- Chain worker: independently run local contract tests and review deployment invariants read-only; no transactions, credential output or edits.
+- Deployment worker: prepare only the isolated Headcount HTTP vhost/ACME webroot on `rhm-server-eu`, validate before reload and obtain its certificate using an existing Certbot account. Preserve all other sites; do not start PM2, write operator credentials, deploy contracts or activate the HTTPS proxy until coordinator requests it.
+- Coordinator: securely transfer mode-600 environment, run VPS preflight/build, start one loopback PM2 process, activate the isolated HTTPS proxy, and verify public API/receipts and service health. No concurrent wallet writer.
+- Record source commit, chain receipts, app/TLS deployment, remaining phone-camera verification and publication separately in `STATUS.md`; commit public evidence only.
+
+### Live RPC consistency fix
+
+The first smoke create receipt succeeded at block 47797369, but the subsequent fund precondition returned `NoCampaign`. A bounded diagnostic create reproduced `latestExists=false` and `receiptBlockExists=true` at block 47797469, while the reported head was also 47797469. This is verified provider read inconsistency rather than a failed creation.
+
+Before activation, add regression tests reproducing the stale latest read and a head behind the confirmed receipt. Retain the highest successful receipt block in the existing global process state; pin campaign, allowance and paid reads to the maximum of this floor and an uncached current head. Verify the floor survives module reload and that later external sponsor closure remains visible. Keep interfaces, serial writes and successful-receipt requirements unchanged. Coordinator owns `lib/chain.ts`, tests and shared docs; workers remain read-only.
+
+An instrumented fund/close attempt additionally proved `eth_call` can return RPC code -32001 (`block not found`) for a freshly reported numeric head. Add bounded retries only for read-only block-unavailable errors, keeping the same numeric block per attempt rather than chasing the advancing head. Reverts and unrelated transport failures must fail immediately; never automatically retry a write.
+
+Re-run app checks and chain smoke, ship the verified adapter source, rebuild the VPS and activate only after this live gate passes. Diagnostic campaigns may remain on-chain; record and reconcile their balances rather than treating them as demo evidence.
+
+### Preparation verification
 
 - Node 24: 57 app/preflight tests passed; lint and typecheck exit 0. Missing environment produces expected preflight exit 1 with field names only.
 - PM2 config: one fork and absolute loopback/runtime paths verified; Node 23 rejected as expected.
