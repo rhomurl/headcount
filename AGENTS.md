@@ -41,7 +41,7 @@ These boundaries coordinate work; they do not override a user-authorized change 
 
 ## Verification and handoff
 
-Run checks appropriate to the change and record the exact commands and outcomes. At this baseline no application test/build commands exist.
+Run checks appropriate to the change and record the exact commands and outcomes. The application now provides `npm test`, `npm run lint`, `npm run typecheck`, `npm run build`, `npm run test:contracts`, and `npm run test:local`.
 
 - Docs/config: verify local links, placeholders, ignore rules, and `git diff --check`.
 - Contracts: `forge test` in `contracts/` after the Foundry project exists.

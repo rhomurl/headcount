@@ -2,7 +2,7 @@
 
 Sponsor-funded attendance payouts on Base Sepolia. A sponsor funds an escrow campaign with test hUSDC, guests RSVP without a wallet, and a host scans rotating QR tickets. The operator submits accepted check-ins to the escrow contract, which pays the registered host once per ticket. Closing a campaign refunds the remaining balance to its sponsor.
 
-**Status:** repository and build specifications only. The application, contracts, and deployment have not been implemented or verified. See [implementation status](docs/STATUS.md).
+**Status:** MVP implemented and verified locally on `codex/headcount-mvp`. 51 app tests, 15 contract tests, production build, and the real local-chain API flow pass. Base Sepolia/VPS deployment and real-phone camera checks remain unverified. See [implementation status](docs/STATUS.md).
 
 ## Start here
 
@@ -12,7 +12,7 @@ Sponsor-funded attendance payouts on Base Sepolia. A sponsor funds an escrow cam
 - [Documentation index](docs/README.md): task packs and project records.
 - [Contributing](CONTRIBUTING.md): local workflow and handoff checks.
 
-## Planned stack
+## Stack
 
 Next.js App Router, TypeScript, Tailwind, better-sqlite3, viem v2, and Solidity contracts built with Foundry and OpenZeppelin. The app runs as one Node server on a VPS behind Caddy, using one operator wallet and one serial transaction queue.
 
@@ -20,7 +20,29 @@ The MVP targets **Base Sepolia, chain ID 84532**, with a **6-decimal mock token,
 
 ## Local development
 
-There is no `package.json`, app scaffold, or Foundry project yet. Start with the [build plan](docs/PLAN.md) and the task packs. Add runnable install, development, test, and build commands here when those projects exist.
+Use Node 24 LTS and npm. The lockfile pins dependencies.
+
+```sh
+nvm use
+npm ci
+npm run dev
+```
+
+The UI starts without a wallet. Creating/funding campaigns and payouts require the server environment below and deployed testnet contracts. Unconfigured chain operations fail safely; the application does not fabricate transactions.
+
+```sh
+npm test
+npm run typecheck
+npm run lint
+npm run build
+npm run test:contracts
+# After a successful build, run real loopback-chain integration:
+npm run test:local
+```
+
+Contract tooling is a local pinned npm development dependency. Run Foundry from `contracts/` using `node tools/forge.cjs`. This wrapper correctly propagates test and deployment failures. The Solidity 0.8.24 compiler is pinned in the lockfile and runs through a local bridge. See [the implementation plan](docs/IMPLEMENTATION.md) for ownership and verification gates.
+
+`npm run smoke` sends Base Sepolia transactions with the configured operator. Run it only for an authorized testnet integration task. `scripts/api-test.sh` also creates/funds/pays a test campaign; read its warning and use an explicitly selected target.
 
 An environment template is provided:
 
@@ -38,10 +60,12 @@ Fill in local testnet values after obtaining an operator wallet and deploying th
 | `AGENTS.md`, `CLAUDE.md` | Coding-agent guidance |
 | `docs/` | Build plan, task packs, status, and setup record |
 | `.env.example` | Placeholder-only environment configuration |
-| `contracts/`, `app/`, `lib/`, `scripts/` | Planned implementation directories; not created yet |
+| `contracts/`, `app/`, `lib/`, `scripts/` | MVP contracts, application, server libraries and verification scripts |
 
 See [security guidance](SECURITY.md) before working with keys, attendee data, or chain transactions. Deployment instructions are in [the VPS task pack](docs/04-deploy.md); they are a plan, not evidence of a live deployment.
 
 ## License
 
 No license has been selected. Add an owner-approved license before representing this project as open source.
+
+The local flow harness uses an ephemeral Anvil chain and temporary SQLite database, confirms host payout and sponsor refund, and removes the test database afterward. It does not contact Base Sepolia or prove deployment. Camera verification over HTTPS on two real phones remains a separate gate.

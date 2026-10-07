@@ -16,6 +16,7 @@
 
 | Document | Purpose |
 | --- | --- |
+| [IMPLEMENTATION.md](IMPLEMENTATION.md) | MVP implementation plan, ownership and review resolutions |
 | [STATUS.md](STATUS.md) | Implemented state, verification, decisions, and next work |
 | [REPOSITORY-SETUP.md](REPOSITORY-SETUP.md) | Repository bootstrap plan and scope |
 | [AGENTS.md](../AGENTS.md) | Shared coding-agent instructions |

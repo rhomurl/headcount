@@ -72,6 +72,7 @@ export async function createCampaignOnchain(campaignId: string, sponsor: `0x${st
 export async function fundCampaign(campaignId: string, amount: bigint): Promise<`0x${string}`>;  // operator mints MockUSDC to self, then fund()
 export async function getCampaignBalance(campaignId: string): Promise<bigint>;
 export async function isPaid(campaignId: string, ticketId: string): Promise<boolean>;
+export async function isCampaignClosed(campaignId: string): Promise<boolean>; // reconcile direct sponsor closure
 export async function payCheckin(campaignId: string, ticketId: string): Promise<`0x${string}`>;
 export async function closeCampaignOnchain(campaignId: string): Promise<`0x${string}`>;
 export function explorerTx(hash: string): string;    // https://sepolia.basescan.org/tx/<hash>
@@ -91,7 +92,7 @@ CREATE TABLE IF NOT EXISTS campaigns (
   host_pin TEXT NOT NULL,
   sponsor_pin TEXT NOT NULL,
   create_tx TEXT,
-  status TEXT NOT NULL DEFAULT 'open',  -- open | closed
+  status TEXT NOT NULL DEFAULT 'open',  -- open | closing | closed
   close_tx TEXT,
   created_at INTEGER NOT NULL
 );
@@ -126,7 +127,7 @@ CREATE TABLE IF NOT EXISTS checkins (
 | POST `/api/campaigns` | `{ name, sponsorWallet, hostWallet, perHead: number (UI units), cap: number }` | `{ id, hostPin, sponsorPin, createTx }` (pins are 6 digits, shown once) |
 | POST `/api/campaigns/[id]/fund` | `{ sponsorPin }` | `{ tx, amount }` funds `perHead*cap` (demo funding by operator) |
 | GET `/api/campaigns/[id]` | none | `{ id, name, perHead, cap, status, hostWallet, sponsorWallet, createTx }` (UI units) |
-| GET `/api/campaigns/[id]/stats` | none | `{ verified, cap, paidUi, escrowUi, pendingCount, failedCount, status, closeTx, feed: [{ checkinId, name, scannedAt, payoutStatus, payoutTx }] }` latest 20 first |
+| GET `/api/campaigns/[id]/stats` | none | `{ verified, cap, paidUi, escrowUi, pendingCount, failedCount, status, closeTx, feed: [{ checkinId, name, scannedAt, payoutStatus, payoutTx }], failedFeed: [same shape] }` latest 20 first |
 | POST `/api/campaigns/[id]/rsvp` | `{ name, contact }` | `{ ticketId }`. Duplicate contact returns the existing ticketId (200). 409 if closed. |
 | GET `/api/tickets/[ticketId]/qr` | none | `{ code, expiresInMs, checkedIn, campaignName, guestName }` |
 | POST `/api/campaigns/[id]/checkin` | `{ code, hostPin }` | 200 `{ guestName, checkinId }`; 401 bad pin; 400 `{error: reason}`; 403 wrong campaign; 409 `already_checked_in` / `cap_reached` / `closed` |
@@ -142,3 +143,18 @@ CREATE TABLE IF NOT EXISTS checkins (
 - Never return `OPERATOR_PRIVATE_KEY` or ticket `secret` from any route.
 - Money is `bigint` in base units internally. Convert at the API edge only.
 - Mobile-first UI.
+
+## Implementation clarifications (7 October 2026)
+
+- Campaign rows without `create_tx` are not usable yet. The API rejects RSVP/funding/check-in until chain creation succeeds. Failed creation is sanitized in responses; an uncertain receipt may require operator reconciliation.
+- The database and public API status also allow `closing`. Persist this before awaiting the close receipt; new check-ins, retries, funding and RSVP are blocked while closing. On an uncertain failure keep `closing`, and let the sponsor retry close. The chain close helper is idempotent: when the contract is already closed, retrieve its prior `Closed` event transaction.
+- Close and check-in/retry claims share one in-process campaign mutation guard. Closure requires zero pending payouts before setting `closing`. One process is required for both the campaign guard and operator queue.
+- Solidity cannot declare an error and event named `Closed` in the same contract namespace. The custom error is namespaced in a library, preserving the specified error/event ABI names. Zero amounts and caps use `InvalidAmount` and `InvalidCap` errors.
+- Money inputs must be finite, positive where required, representable as safe integer base units, and use at most six decimals. Database integer reads use bigint; IDs, timestamps and counts are converted only within safe bounds.
+- Chain environment configuration is lazy and server-only; local build and tests do not require a populated wallet. Production chain functions always use the real adapter. Test transport mocks are confined to tests.
+
+- Idempotent close recovery searches at most 20,000 recent blocks in 2,000-block windows. An older closed campaign with a missing local close receipt remains `closing` and requires operator reconciliation from explorer evidence.
+
+- Closure requires every accepted check-in to be confirmed. Pending returns `payouts_pending`; failed/unreconciled returns `payouts_unsettled`. Restart-interrupted jobs are failed and remain discoverable/retryable, and fence closure until settled.
+- Stats includes `failedFeed`, all failed check-ins bounded by campaign cap (maximum 1,000), independently of the latest-20 activity feed. The UI always offers recovery for these rows while open.
+- `isCampaignClosed` reconciles direct sponsor closure before accepting mutations and during status reads. Observed chain closure is persisted with the recovered receipt, or as `closing` while receipt recovery is unavailable. A sponsor transaction racing a just-accepted scan can still cause a failed payout; the operator cannot prohibit the sponsor's on-chain close with this contract design.

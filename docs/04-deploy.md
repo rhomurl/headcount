@@ -4,7 +4,7 @@ Do this by T+2:45. The contracts are already deployed from your laptop in task 0
 
 ## On the VPS
 ```bash
-# Node 20+ and build tools for better-sqlite3 (arm64 usually has prebuilds; these are a fallback)
+# Node 24 LTS and build tools for better-sqlite3 (arm64 usually has prebuilds; these are a fallback)
 sudo apt-get install -y build-essential python3
 
 git clone https://github.com/<you>/headcount.git ~/headcount && cd ~/headcount
@@ -13,7 +13,7 @@ cp /path/to/.env.local .env.local      # same OPERATOR_PRIVATE_KEY + TOKEN/ESCRO
 mkdir -p data
 npm ci
 npm run build                           # takes a few minutes on 2 vCPU; don't panic
-pm2 start npm --name headcount -- start -- -p 3100
+pm2 start npm --name headcount --instances 1 -- start -- -p 3100
 pm2 save
 ```
 Port 3100 avoids clashing with n8n or anything already on 3000. Check with `ss -ltnp | grep 3100` first.

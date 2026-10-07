@@ -1,6 +1,6 @@
 # Contributing
 
-Read [AGENTS.md](AGENTS.md), [CONTRACT.md](CONTRACT.md), and the relevant [task pack](docs/README.md) first. The repository currently contains specifications and documentation only.
+Read [AGENTS.md](AGENTS.md), [CONTRACT.md](CONTRACT.md), and the relevant [task pack](docs/README.md) first. The MVP is implemented and locally verified; live deployment gates remain in `docs/STATUS.md`.
 
 ## Workflow
 

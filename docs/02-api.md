@@ -3,7 +3,7 @@
 Paste this whole file to your coding agent. Read `CONTRACT.md` first.
 
 ## Goal
-Implement `lib/db.ts`, `lib/qr.ts`, `lib/payout.ts`, and every route in the CONTRACT API table. Import chain functions from `@/lib/chain`. If Agent A isn't done, create a temporary `lib/chain.ts` stub with the exact signatures. It should return fake hashes (`"0x" + "ab".repeat(32)`) after a 1.5s delay, and keep an in-memory balance. Delete the stub when A's real file lands. Only touch `lib/db.ts`, `lib/qr.ts`, `lib/payout.ts`, `app/api/**`.
+Implement `lib/db.ts`, `lib/qr.ts`, `lib/payout.ts`, and every route in the CONTRACT API table. Import chain functions from `@/lib/chain`. Do not create or replace `lib/chain.ts` with a stub. Tests may mock chain calls inside the test runner while Agent A implements the real adapter. Only touch `lib/db.ts`, `lib/qr.ts`, `lib/payout.ts`, `app/api/**`.
 
 ## lib/db.ts
 - `new Database(process.env.DB_PATH ?? "./data/headcount.db")`. Create `data/` if missing.
@@ -36,3 +36,9 @@ new rsvp → GET qr → sleep 61 → checkin with that stale code → 400 expire
 close → escrowUi 0, status closed
 ```
 Commit.
+
+## Integration clarification
+
+Persist `closing` before awaiting close, block new scans/funding/RSVP/retries, and permit sponsor close retry after uncertain receipt failure. Use the shared campaign mutation guard and idempotent chain close helper. Rows without `create_tx` are not ready for RSVP/check-in/funding. See the implementation clarifications in `CONTRACT.md`.
+
+Close also rejects failed/unreconciled check-ins (`payouts_unsettled`), not just pending. Stats supplies a separate cap-bounded `failedFeed`. Reconcile directly observed on-chain closure with `isCampaignClosed` before mutations; record the residual direct-close race described in CONTRACT.md.

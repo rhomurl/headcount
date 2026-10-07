@@ -72,3 +72,9 @@ Optional (10 min, good for credibility with judges): add `--verify --etherscan-a
 
 ## Fallback (only if contract deploy is still broken at T+1:30)
 Keep the exact `lib/chain.ts` exports, but implement them as plain ERC20 `transfer` calls from the operator wallet, with campaign balances tracked in SQLite. The rest of the app doesn't change. Say "custodial v0" on the slide.
+
+## Integration clarification
+
+Use lazy server-only configuration and the global serial queue, including receipt recovery for close: if already closed, return the prior `Closed` event transaction. The `Closed` custom error must be library-namespaced because the event has the same name. Zero amounts/caps use `InvalidAmount`/`InvalidCap`. Validate money rather than silently rounding fractional base units. Tests and local builds need no private environment. No temporary chain adapter is permitted.
+
+Also export `isCampaignClosed(campaignId): Promise<boolean>` for API reconciliation of direct sponsor closure. Authored contracts use SPDX UNLICENSED until the owner selects a license.

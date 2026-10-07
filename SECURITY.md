@@ -1,6 +1,6 @@
 # Security and data handling
 
-Headcount is currently a planned testnet demo. No code, contract, or deployment has been audited or verified.
+Headcount is a testnet demo MVP with local tests and real loopback-chain integration. No independent security audit or live deployment has been completed.
 
 ## Reporting a vulnerability
 

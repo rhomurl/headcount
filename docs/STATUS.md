@@ -6,36 +6,48 @@ Last updated: 7 October 2026 (Asia/Manila).
 
 | Area | Status | Evidence / completion gate |
 | --- | --- | --- |
-| Local Git and documentation baseline | Complete | Initialized `main`; root guidance, shared specification, templates, and documentation verified |
-| Next.js scaffold and dependencies | Not started | No package manifest or application source |
-| Contracts and chain integration | Not started | Foundry tests and testnet smoke receipt required |
-| Database and API | Not started | API flow and rejection cases in [02-api.md](02-api.md) |
-| UI | Not started | Browser flow and mobile scanner checks in [03-ui.md](03-ui.md) |
-| Integration | Not started | Real API/chain flow; mocks removed |
-| GitHub publication | Not configured | No remote configured by repository setup |
-| Contract deployment | Not performed | Testnet addresses and successful receipts required |
-| VPS deployment | Not performed | Live HTTPS flow with two phones required |
-| Submission assets | Not verified | Live URL, public repo, deck, and backup video per [PLAN.md](PLAN.md) |
+| Local Git/documentation baseline | Complete | Existing managed worktree, branch `codex/headcount-mvp` |
+| Next.js scaffold/dependencies | Implemented and locally verified | Node 24, npm lockfile; tests, lint, types and default production build pass |
+| Contracts/chain adapter | Implemented and locally verified | Solidity 0.8.24; 15 Foundry tests; real adapter in loopback Anvil flow |
+| Database/API | Implemented and locally verified | 16 API/QR tests; real SQLite + real-chain API flow |
+| UI | Implemented; automated local checks verified | 10 UI tests; desktop/mobile render and scanner PIN gate; screenshots in `screenshots/` |
+| Integration | Locally verified | 51 app tests plus loopback real receipts, host payout and sponsor refund |
+| GitHub publication | Not performed | No push, public repository or remote verified during implementation |
+| Contract deployment | Not performed on Base Sepolia | Ephemeral Anvil deployment is local test evidence only |
+| VPS deployment | Not performed | HTTPS camera flow with two real phones remains required |
+| Submission assets | Not completed | Live URL, public repository, deck and backup video remain separate |
 
-## Decisions and unresolved setup
+## Decisions and review resolutions
 
-- Existing scope decisions remain in [PLAN.md](PLAN.md); exact interfaces remain in [CONTRACT.md](../CONTRACT.md).
-- Select and record the Node version and package manager when scaffolding the app; commit its lockfile.
-- The owner has not selected a license or configured a private vulnerability reporting channel.
-- Credentials, RPC provisioning, operator funding, DNS, and VPS access have not been checked.
-- Record contract addresses, public URLs, and explorer links only after deployment verification. Never record keys or PINs here.
+- Reused the managed worktree and created `codex/headcount-mvp`. Chain, API and UI subagents had exclusive file ownership; coordinator integrated tooling/docs.
+- Runtime: Node 24 LTS, verified with bundled Node 24.19.0. Homebrew's Node 22 alias unexpectedly points to Node 23; use `.nvmrc` rather than that alias.
+- Production always uses the real server-only chain adapter. No application mock chain, fake receipts or temporary production adapter exists. Tests mock transports where appropriate.
+- Every unresolved accepted payout fences closure. Interrupted pending jobs become retryable failed jobs on database reopen; close rejects them until confirmed.
+- Separate `failedFeed` keeps every failed payout discoverable within the campaign maximum of 1,000, independently of the recent-20 activity feed.
+- Observed direct sponsor closure synchronizes durable status and receipt evidence. A direct sponsor close racing after an open-state read may still cause a failed payout; contract authorization cannot prohibit that race.
+- `closing` persists before awaiting close. Uncertain close is retryable; recent receipt recovery covers at most 20,000 blocks. Older missing receipts require manual operator reconciliation.
+- One Node process is required for the campaign guards and operator queue. No cluster/multi-instance configuration was verified.
+- Foundry uses a pinned npm compiler bridge. Its native-binary wrapper propagates failures; upstream npm launcher 1.7.1 incorrectly returned success for a failing suite.
+- Database paths are runtime storage and excluded from build tracing. No attendee database, wallet key, PIN screenshot or populated environment file is committed.
+- Authored Solidity is UNLICENSED until the owner selects a license. Private vulnerability reporting and attendee retention policies remain undecided.
 
-## Next work
+## Verification evidence
 
-Start the app scaffold and prerequisite checks in `PLAN.md`, then implement the chain, API, and UI task packs within the user's requested scope. Integration and live-phone verification remain separate gates.
+All commands used Node 24.19.0 (bundled runtime added to PATH):
 
-## Verification log
+- `npm test`: 8 files, **51 passed**, zero failures. Includes API/QR 16, chain/money 25, UI 10.
+- `npm run test:contracts`: **15 passed**, zero failed/skipped, Solidity 0.8.24. Foundry emitted harmless global signature-cache warnings in the restricted filesystem; compilation/tests completed.
+- `npm run typecheck`: exit 0. Production build also completed its TypeScript check.
+- `npm run lint`: exit 0, zero warnings after configuration cleanup.
+- `npm run build`: default Turbopack exit 0 with local compiler-worker port access. Initial sandbox-only run failed because internal port binding was denied; `npm run build -- --webpack` also passed. Final Turbopack build is warning-free.
+- `npm run test:local`: exit 0. Ephemeral chain ID 84532 on loopback Anvil, generated temporary wallet, production Next server and temporary SQLite database. Actual local transactions verified create/fund/RSVP/QR/check-in, successful host payout, PIN/malformed/duplicate/expired rejection, close and sponsor refund. Escrow token balance finished at zero; services and test DB cleaned up.
+- Browser verification: bundled Playwright with installed Chrome via `/private/tmp/headcount-browser.mjs`, exit 0. Desktop 1400×1000 and mobile 390×844 create page, scanner PIN gate, no horizontal overflow and no page exceptions. Saved [desktop](screenshots/create-desktop.png) and [mobile](screenshots/create-mobile.png) screenshots contain no PINs. Camera permission and two-phone HTTPS scanning were not exercised.
+- Independent scoped re-review: all three material findings addressed; reviewer separately ran 30 API/chain tests successfully. Full flow above uses real local contracts rather than transport mocks.
+- `bash -n scripts/api-test.sh`, Solidity formatting and `git diff --check`: passed.
+- `npm audit --omit=dev`: zero known runtime advisories. Full audit reports seven development-tool dependency entries (six high, one low), involving the pinned Solidity toolchain and ESLint glob dependencies. These remain recorded; no force downgrade/upgrade was applied.
 
-Repository bootstrap checks on 7 October 2026:
+## Remaining gates
 
-- `git branch --show-current`: `main`.
-- `git remote -v`: no remotes configured.
-- Python standard-library validation: 16 Markdown files, 47 local links, zero missing targets or trailing-whitespace errors; required baseline files exist and secret/address placeholders are empty.
-- `git check-ignore` on representative paths: local environment files, macOS artifacts, SQLite files/sidecars, Node/Next.js outputs, and Foundry outputs are ignored. `.env.example` remains trackable.
+Configure dedicated testnet operator credentials/funding, RPC provisioning and deployed mock-token/escrow addresses. Then authorize/run the explicit-opt-in Base Sepolia smoke test and record explorer receipts. Publication, DNS, VPS/HTTPS deployment, real-phone camera verification and submission artifacts require separate work. The local preview has chain credentials disabled and cannot create funded campaigns.
 
-No application tests, build, chain transactions, or deployment checks ran: application code and tooling do not exist yet. Add exact commands, outcomes, and relevant limitations for subsequent work; documentation checks do not complete implementation gates.
+No Base Sepolia transactions, external deployment or publication occurred in this implementation run.
